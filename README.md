@@ -67,3 +67,8 @@ text editor:
 
 Misc:
  - port to cardputer and Picocalc
+
+## Thanks to/Credit
+Hartmut Grawe - github.com/ersatzmoco
+
+David Johnson-Davies http://forum.ulisp.com/t/extensible-t-deck-lisp-editor/1322 and [uLisp](http://www.ulisp.com) itself
