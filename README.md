@@ -46,24 +46,24 @@ Exits uos. You can also exit uos by using `touchscreen + c`
 
 ## Known Issues/TODO
 All:
-scroll bars
-line numbers
-copy paste
-autocomplete
-show result type
+ - scroll bars
+ - line numbers
+ - copy paste
+ - autocomplete
+ - show result type
 
 directory browser:
-rename files
-highlight folders
-going back through folders should remember position?
+ - rename files
+ - highlight folders
+ - going back through folders should remember position?
 
 Edit:
-create new functions
+ - create new functions
 
 text editor:
-change save directories
-put out text as 'lines result
-allow saving of new files
+ - change save directories
+ - put out text as 'lines result
+ - allow saving of new files
 
 Misc:
-port to cardputer and Picocalc
+ - port to cardputer and Picocalc
