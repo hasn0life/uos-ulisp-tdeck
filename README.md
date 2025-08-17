@@ -19,12 +19,12 @@ Applications can also produce results, which show up in the results menu. There 
 ### Directory
 (returns `'path`)
 
-The directory app lets you select files on the SD card. You can navigate with the trackball, left and right let you access and leave folders. `Enter` pushes the selected file as a result and brings you back to the window manager. Pressing `n` lets you create a new file, `f` lets you create a new folder. The `delete` key deletes the selected folder. Note that folders with files inside them can't be deleted, you have to delete all the files inside first. 
+The directory app lets you select files on the SD card. You can navigate with the trackball, left and right let you access and leave folders. `Enter` pushes the selected file as a result and brings you back to the window manager. Pressing `n` lets you create a new file, `f` lets you create a new folder. 'r' lets you rename the selected file. The `delete` key deletes the selected folder. Note that folders with files inside them can't be deleted, you have to delete all the files inside first. 
 
 ### Text Editor
-(takes `'path`, `'text`, or `'lines`, should return `'lines` but doesnt yet)
+(takes `'path`, `'text`, `'symbol` or `'lines`, should return `'lines` but doesnt yet)
 
-Lets you edit text. The trackball moves the cursor, holding the touchscreen lets you move the cursor accross more characters. Typing on the keyboard inserts the characters you typed. `enter` creates a new line, and `delete` deletes character. `Touchscreen + s` saves the text to the currently opened file (it also crashes if we havent selected a file rn). 
+Lets you edit text. The trackball moves the cursor, holding the touchscreen lets you move the cursor accross more characters. Typing on the keyboard inserts the characters you typed. `enter` creates a new line, and `delete` deletes character. `Touchscreen + s` saves the text to the currently opened file (it also crashes if we havent selected a file rn). If a symbol is open `Touhscreen + s` binds the symbol. 
 
 ### Function Browser
 (returns `'symbol`)
@@ -35,6 +35,7 @@ Lets you browse the currently defined uLisp functions and displays their documen
 (takes in `'symbol`)
 
 Lets you edit uLisp functions, its operations are described in http://forum.ulisp.com/t/extensible-t-deck-lisp-editor/1322 The trackball lets you scroll the window
+New function `n` lets you rename the symbol.
 
 ### Text Viewer
 (takes `'path`, `'text`, or `'lines`)
