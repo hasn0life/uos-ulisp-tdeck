@@ -17,7 +17,7 @@ Applications can also produce results, which show up in the results menu. There 
 
 ## Applications
 ### Directory
-(returns path)
+(returns `'path`)
 
 The directory app lets you select files on the SD card. You can navigate with the trackball, left and right let you access and leave folders. `Enter` pushes the selected file as a result and brings you back to the window manager. Pressing `n` lets you create a new file, `f` lets you create a new folder. The `delete` key deletes the selected folder. Note that folders with files inside them can't be deleted, you have to delete all the files inside first. 
 
@@ -37,7 +37,7 @@ Lets you browse the currently defined uLisp functions and displays their documen
 Lets you edit uLisp functions, its operations are described in http://forum.ulisp.com/t/extensible-t-deck-lisp-editor/1322 The trackball lets you scroll the window
 
 ### Text Viewer
-(takes `'path`, `'text`, or `'lines)
+(takes `'path`, `'text`, or `'lines`)
 
 Lets you view the text. Trackball scrolls the text up and down.
 
@@ -48,19 +48,21 @@ Exits uos. You can also exit uos by using `touchscreen + c`
 All:
  - scroll bars
  - line numbers
+ - parenthesis highlighting
  - copy paste
  - autocomplete
  - show result type
 
 directory browser:
- - rename files
+ - ~~rename files~~
  - highlight folders
  - going back through folders should remember position?
 
 Edit:
- - create new functions
+ - ~~create new functions~~
 
 text editor:
+ - ~~open and bind symbols~~
  - change save directories
  - put out text as 'lines result
  - allow saving of new files

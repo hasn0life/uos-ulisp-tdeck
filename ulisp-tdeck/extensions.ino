@@ -443,6 +443,23 @@ object *fn_directory2(object *args, object *env) {
   return cdr(result);
 }
 
+//from https://github.com/nanomonkey/ulisp-tdeck/blob/edits/ulisp-extensions.ino
+object *fn_rename_file(object *args, object *env) {
+  (void) env;
+  SDBegin();
+  object *path1 = first(args);
+  object *path2 = second(args);
+  char buffer1[BUFFERSIZE];
+  char buffer2[BUFFERSIZE];
+  if (SD.rename(MakeFilename(path1, buffer1), MakeFilename(path2, buffer2))) {
+    return path2;
+  }
+  else { 
+    error2(PSTR("Unable to rename file."));
+    return nil;
+  }
+}
+
 #endif
 
 
@@ -450,68 +467,17 @@ void SDWriteTwo (File file, uint16_t word) {
   file.write(word & 0xFF); file.write((word >> 8) & 0xFF);
 }
 
-object *fn_savescreen (object *args, object *env) {
-  (void) env;
-  #if defined(sdcardsupport)
-  object *arg = checkstring(first(args));
-  SDBegin(); //sd_begin();
-  File file;
-  char buffer[BUFFERSIZE];
-  file = SD.open(MakeFilename(arg, buffer), FILE_WRITE);
-  if (!file) error2(PSTR("problem saving to SD card or invalid filename"));
-  uint16_t width = 320, height = 240;
-  file.write('B'); file.write('M');          // BMP
-  SDWriteInt(file, 14+40+width*height*2);    // File size in bytes
-  SDWriteInt(file, 0);
-  SDWriteInt(file, 14+40);                   // Offset to image data from start
-  // Image header: 40 bytes
-  SDWriteInt(file, 40);                      // Header size
-  SDWriteInt(file, width);                   // Image width
-  SDWriteInt(file, height);                  // Image height
-  SDWriteTwo(file, 1);   // Planes
-  SDWriteTwo(file, 16); // Bits per pixel
-  SDWriteInt(file, 0);                       // Compression (none)
-  SDWriteInt(file, 0);                       // Image size (0 for uncompressed)
-  SDWriteInt(file, 0);                       // Preferred X resolution (ignore)
-  SDWriteInt(file, 0);                       // Preferred Y resolution (ignore)
-  SDWriteInt(file, 0);                       // Colour map entries (ignore)
-  SDWriteInt(file, 0);                       // Important colours (ignore)
-  // Image data: width * height * 2 bytes
-  for (int y=height-1; y>=0; y--) {
-    int line = y/Leading, row = y%Leading;
-    for (int x=0; x<width; x++) {
-      int column = x/6, col = x%6;
-      char c = 0; bool bit;
-      if (column < Columns) c = ScrollBuf[column][(line+Scroll) % Lines];
-      if (col>=5 || row>=8) bit = 0;
-      else bit = font[(c & 0x7f)*5 + col] >> row & 1;
-      uint16_t rgb;
-      if (c & 0x80 && row<8) {
-        if (bit) rgb = COLOR_BLACK; else rgb = COLOR_GREEN;
-      } else {
-        if (bit) rgb = COLOR_WHITE; else rgb = COLOR_BLACK;
-      }
-      uint16_t data = (rgb & 0xFFC0)>>1 | (rgb & 0x1F); // Convert to 555 format
-      SDWriteTwo(file, data);
-    }
-  }
-  file.close();
-  #endif
-  return nil;
-}
-
-
 // Symbol names
 const char string_gettouchpoints[] PROGMEM = "get-touch-points";
 const char stringKeyboardGetKey[] PROGMEM = "keyboard-get-key";
 const char stringKeyboardFlush[] PROGMEM = "keyboard-flush";
 const char stringSearchStr[] PROGMEM = "search-str";
 const char stringsearchn[] PROGMEM = "searchn";
-const char stringsavescreen[] PROGMEM = "save-screen";
 
 #if defined sdcardsupport
 const char stringSDFileExists[] PROGMEM = "sd-file-exists";
 const char stringSDFileRemove[] PROGMEM = "sd-file-remove";
+const char string_rename_file[] PROGMEM = "rename-file";
 
 const char stringDir2[] PROGMEM = "dir2";
 const char stringmkdir[] PROGMEM = "mkdir";
@@ -543,6 +509,8 @@ const char docSDFileExists[] PROGMEM = "(sd-file-exists filename)\n"
 "Returns t if filename exists on SD card, otherwise nil.";
 const char docSDFileRemove[] PROGMEM = "(sd-file-remove filename)\n"
 "Delete file with filename. Returns t if successful, otherwise nil.";
+const char doc_rename_file[] PROGMEM = "(rename-file filefrom fileto)" 
+"renames file from old filepath to new, can be used to move a file";
 
 const char docDir2[] PROGMEM = "(dir2 [directory])\n"
 "returns a list of filenames in the root or certain directory";
@@ -554,8 +522,6 @@ const char docrmdir[] PROGMEM = "(rmdir directory)\n"
 "Delete specified directory. Returns t if successful, otherwise nil.";
 #endif
 
-const char docsavescreen[] PROGMEM = "(save-screen filename)\n"
-"Saves an image of the text screen as a BMP file on the SD card.";
 
 
 // Symbol lookup table
@@ -571,12 +537,11 @@ const tbl_entry_t lookup_table2[] PROGMEM = {
 #if defined sdcardsupport
   { stringSDFileExists, fn_SDFileExists, 0211, docSDFileExists },
   { stringSDFileRemove, fn_SDFileRemove, 0211, docSDFileRemove },
+  { string_rename_file, fn_rename_file, 0222, doc_rename_file },
 
   { stringDir2, fn_directory2, 0201, docDir2 },
   { stringmkdir, fn_SDmkdir, 0211, docmkdir },
   { stringrmdir, fn_SDrmdir, 0211, docrmdir },
-
-  { stringsavescreen, fn_savescreen, 0211, docsavescreen },
 #endif
 
 };

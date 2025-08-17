@@ -262,7 +262,6 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
   (show-text w)
   (when isprompt
     (get-key)))
-
 ;
 ;; Documentation Browser Application
 ;
@@ -441,12 +440,22 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
   (let* ( (path (when (eq (cadr args) 'path) (car args)))
           (text (cond 
                   ((eq (cadr args) 'text) (list (car args)))
-                  ((eq (cadr args) 'symbol) (list (string (car args))))))
-          (lines (if path (read-file path) (if text text (list "no file selected"))))
+                  ((eq (cadr args) 'symbol) 
+					(let ((txt (with-output-to-string (str2) (pprint (eval (car args)) str2))))
+						(split-string-to-list (string #\Newline) 
+						(with-output-to-string (str) 
+							(dotimes (x (length txt))	
+								(let ((c (char txt x))) 
+									(when (not (or (eq c #\ETX) (eq c #\STX)))
+										(princ c str))))))))))
+          (lines (if path (read-file path) (if text text (list " "))))
           (txt (uos:texteditdisplay lines win))
           (edittext-disp (lambda () (show-edittext txt) (show-cursor txt t)))
           )
-    (win 'title (concatenate 'string "Text Editor: " (if path path "")))
+    (win 'title (concatenate 'string "Text Editor: " 
+					(cond (path path) 
+					((eq (cadr args) 'symbol) (princ-to-string (car args))) 
+					(t ""))))
     (lambda (&rest msgs)
       (case (car msgs)
         (up (txt 'up) (edittext-disp))
@@ -461,11 +470,20 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
         (del (txt 'del) (edittext-disp))
         (show (draw-window-border (txt 'win)) (edittext-disp))
         (title (win 'title))
-        (save (display-message (list "Saving to " path)) 
-              (with-sd-card (str (subseq path 1) 2) #| remove the forward slash on the path |#
-                (dolist (line (txt 'lines)) (princ line str) (terpri str))))
+        (save (cond
+				(path 
+					(when (eq #\y (display-message (list "Press y to save to " path) t)) 
+						(with-sd-card (str (subseq path 1) 2) #| remove the forward slash on the path |#
+						(dolist (line (txt 'lines)) (princ line str) (terpri str)))))
+				((eq (cadr args) 'symbol) 
+					(when (eq #\y (display-message (list " Press y to bind to " (string (car args))) t))
+						(eval  (read-from-string (with-output-to-string (str) 
+						(princ "(defvar " str) (princ (car args) str) (princ " " str)  
+						(mapc (lambda (x) (princ x str)) (txt 'lines)) (princ ")" str))))) ))
+			(edittext-disp))
         (t (when (printable (code-char lastkey)) (txt (code-char lastkey)) (edittext-disp)))
         ))))
+
 ;
 ; Directory Browser Application
 ;
@@ -484,13 +502,16 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
     (lambda (&rest msgs)
       (case state 
         #| save and new input|#
-        ((new save folder appenddata) 
+        ((new save folder rename appenddata) 
          (case (car msgs)
            (enter 
             (case state 
               (folder (mkdir (concatenate 'string (concat-dir prev) "/" search)))
               (new (with-sd-card (str (concatenate 'string (concat-dir prev) "/" search) 2) (princ "" str)))
-              (save nil)
+              (rename (rename-file  
+						(concatenate 'string (concat-dir prev) "/" (menu 'select-car))
+						(concatenate 'string (concat-dir prev) "/" search)))
+			  (save nil)
               (appenddata nil))
             (funcall (menu 'win ) 'title (concat-dir prev))
             (menu 'set-opts (map-dir (concat-dir prev)) ) 
@@ -530,8 +551,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
                            (setf current-window wm) (current-window 'show))))
            (del 
             (when (eq #\y (display-message 
-                           (list (concatenate 'string "Deleting " (menu 'select-car))
-                                 "" "Press y to confirm or any key to return") t))
+                           (list (concatenate 'string "Press y to delete " (menu 'select-car)) ) t))
               (if (if (eq nil (menu 'select-cdr))
                       (rmdir (concatenate 'string (concat-dir prev) "/" (menu 'select-car)))
                       (sd-file-remove (concatenate 'string (concat-dir prev) "/" (menu 'select-car))))
@@ -550,7 +570,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
                     ((eq c #\s) (setf state 'save))
                     ((eq c #\f) (setf state 'folder))
                     ((eq c #\a) (setf state 'appenddata))
-					
+					((eq c #\r) (setf state 'rename))
                     )
                   (setf search "")
                   (win 'title (concatenate 'string (string state) ": " search))
@@ -583,8 +603,13 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
                        ((assoc cmd *atomic-cmds*) (funcall (cdr (assoc cmd *atomic-cmds*)) fun))
                        (t fun)))))
 
-          (name (if  (eq (cadr args) 'symbol) (car args) 'temp-fun))
-          (fun (eval name))
+          (name (when (eq (cadr args) 'symbol) (car args) ))
+          (fun (if name (eval name) '(lambda ())))
+		  (set-name (lambda ()  
+						(write-byte 11) (princ "set name:") 
+						(setq name (eval 
+							(read-from-string (concatenate 'string "(defvar " (string (read)) ")")))) 
+						(win 'title (concatenate 'string "Edit: " (string name)))))
           (%show (lambda ()  
                    (setq cc (append cc (list #\h)))
                    (setq *cmds* cc)
@@ -615,7 +640,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
 
     (define-binary-cmd #\c "cons"
       #'(lambda (val fun) (pop *cmds*) (%edit (cons val fun))))
-
+	  
     (define-binary-cmd #\i "insert"
       #'(lambda (val fun) (pop *cmds*) (%edit (cons val fun))))
 
@@ -638,16 +663,19 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
         (t (let ((c (code-char lastkey)))
              (when (printable c)
                (cond
+				 ((eq c #\n) (set-name))
                  ((eq c #\q) (setf current-window wm) (current-window 'show))
-                 ((eq c #\s) (setq *cmds* cc) (set name (%edit fun))
-                             (setf current-window wm) (current-window 'show))
+                 ((eq c #\s) 
+					(when (eq #\y (display-message (list "Press y to bind to " (string name)) t))
+						(when (not name) (set-name))
+						(setq *cmds* cc) (set name (%edit fun))))
                  ((eq c #\z) (when cc (setq cc (butlast cc))))
                  ((assoc c *binary-cmds*)
                   (write-byte 11) (princ c) (princ #\:)
                   (setq cc (append cc (list (cons c (read))))))
                  ((assoc c *atomic-cmds*) (setq cc (append cc (list c))))
                  (t (write-byte 7)))
-               (%show) )))))))
+               (when (not (eq c #\q)) (%show) ))))))))
 
 
 
