@@ -47,24 +47,24 @@ void initTouch(){
 }
 
 void ISR_trackball_up(){
-  //if(ball_val == 0){
+  if(ball_val == 0){
     ball_val = 218;
-  //}
+  }
 }
 void ISR_trackball_down(){
-  //if(ball_val == 0){
+  if(ball_val == 0){
     ball_val = 217;
-  //}
+  }
 }
 void ISR_trackball_left(){
-  //if(ball_val == 0){
+  if(ball_val == 0){
     ball_val = 216;
-  //}
+  }
 }
 void ISR_trackball_right (){
-  //if(ball_val == 0){
+  if(ball_val == 0){
     ball_val = 215;
-  //}
+  }
 }
 void inittrackball(){
   pinMode(TDECK_TRACKBALL_UP, INPUT_PULLUP);

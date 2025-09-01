@@ -14,11 +14,6 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
 
 ;;;;; Globals
 
-(defun write-text (str)
-  (with-gfx (scr)
-    (princ str scr)
-    )
-  )
 
 (defvar SCR-W 320)
 (defvar SCR-H 240)
@@ -326,15 +321,26 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
   (let* ( (path (when (eq (cadr args) 'path) (car args)))
           (text (cond 
                   ((eq (cadr args) 'text) (list (car args)))
-                  ((eq (cadr args) 'symbol) (list (string (car args))))))
+                  ((eq (cadr args) 'symbol) 
+					(let ((txt (with-output-to-string (str2) (pprint (eval (car args)) str2))))
+						(split-string-to-list (string #\Newline) 
+						(with-output-to-string (str) 
+							(dotimes (x (length txt))	
+								(let ((c (char txt x))) 
+									(when (not (or (eq c #\ETX) (eq c #\STX)))
+										(princ c str))))))))))
           (lines (if path (read-file path) (if text text (list "no file selected"))))
           (txt (uos:textdisplay lines win))
           )
-    (win 'title (concatenate 'string "TextViewer: " (if path path "")))
+    (win 'title (concatenate 'string "TextViewer: " 
+								(if path path "") 
+								(when (eq (cadr args) 'symbol) (princ-to-string (car args)))))
     (lambda (&rest msgs)
       (case (car msgs)
         (up (txt 'up) (show-text txt))
         (down (txt 'down) (show-text txt))
+		(ppage (dotimes (x 5) (txt 'up)) (show-text txt))
+        (npage (dotimes (x 5) (txt 'down)) (show-text txt))
         (show (draw-window-border (txt 'win)) (show-text txt))
         (title (win 'title))
         ))))
@@ -590,6 +596,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
   (let* ( *cmds* 
           *atomic-cmds* 
           *binary-cmds* 
+		  *temp*
           processed 
           (disp (uos:textdisplay (list "") win))
           cc
@@ -635,6 +642,12 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
     (define-atomic-cmd #\x "delete"
       #'(lambda (fun) (pop *cmds*) (if (atom fun) (%edit fun) (%edit (cdr fun)))))
 
+	(define-atomic-cmd #\k "copy"
+      #'(lambda (fun) (pop *cmds*) (setf *temp* (copy-list fun)) (%edit fun)))
+	  
+	(define-atomic-cmd #\v "paste"
+      #'(lambda (fun) (pop *cmds*) (%edit (cons *temp* fun))))
+	  
     (define-binary-cmd #\r "replace"
       #'(lambda (val fun) (pop *cmds*) (if (atom fun) (%edit val) (%edit fun))))
 
@@ -655,10 +668,10 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
     (lambda (&rest msgs)
       (case (car msgs)
         (show (%show))
-        (up (disp 'up) (show-text-hilite disp))
-        (down (disp 'down) (show-text-hilite disp))
-        (right (dotimes (x 5) (disp 'down)) (show-text-hilite disp))
-        (left (dotimes (x 5) (disp 'up)) (show-text-hilite disp))
+        (up (dotimes (x 3) (disp 'up))(show-text-hilite disp))
+        (down (dotimes (x 3) (disp 'down)) (show-text-hilite disp))
+        (right (dotimes (x 8) (disp 'down)) (show-text-hilite disp))
+        (left (dotimes (x 8) (disp 'up)) (show-text-hilite disp))
         (title (win 'title))
         (t (let ((c (code-char lastkey)))
              (when (printable c)
@@ -699,7 +712,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
           (open-menu (uos:menu nil open-win))
           (container-win (uos:window  0 0 100 100))
           (results-win (uos:window 0 0 100 100 "Results"))
-          (results-menu (uos:menu (when results (car results)) results-win))
+          (results-menu (uos:menu (cons (when results (car results)) nil) results-win))
           (selected-menu app-menu) 
           )
 	
@@ -762,11 +775,13 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
 ;
 ;;; MAKE RESULTS REUSE WORK?
 (defun uos (&optional results)
+  (with-gfx (scr)
   (let* (
-         (wm (uos:win-browser results))
-         (current-window wm)
-         (lastkey nil) (exit nil)
-         )
+		 (write-text (lambda (str) (princ str scr)))
+		 (wm (uos:win-browser results))
+		 (current-window wm)
+		 (lastkey nil) (exit nil)
+		 )
     (current-window 'show)
     (loop
      (setf lastkey (keyboard-get-key))
@@ -795,7 +810,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
        )
      (when exit (fill-screen) (return (wm 'results)))
      )
-    ))
+    )))
 
 ;
 ; Helper functions
