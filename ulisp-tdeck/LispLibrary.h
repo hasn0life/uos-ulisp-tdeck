@@ -643,7 +643,7 @@ const char LispLibrary[] PROGMEM = R"lisplibrary(
       #'(lambda (fun) (pop *cmds*) (if (atom fun) (%edit fun) (%edit (cdr fun)))))
 
 	(define-atomic-cmd #\k "copy"
-      #'(lambda (fun) (pop *cmds*) (setf *temp* (copy-list fun)) (%edit fun)))
+      #'(lambda (fun) (pop *cmds*) (setf *temp* (if (atom fun) fun (copy-list fun))) (%edit fun)))
 	  
 	(define-atomic-cmd #\v "paste"
       #'(lambda (fun) (pop *cmds*) (%edit (cons *temp* fun))))
